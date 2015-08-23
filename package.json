@@ -1,0 +1,42 @@
+{
+  "name": "xar-js",
+  "version": "0.1.0",
+  "description": "JS library for reading and writing 'xar' archives (used by Safari extensions)",
+  "main": "build/src/lib.js",
+  "scripts": {
+    "prepublish": "make",
+    "test": "make test"
+  },
+  "keywords": [
+    "xar",
+    "safariextz",
+    "safari",
+    "extensions"
+  ],
+  "author": "Robert Knight <robertknight@gmail.com>",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "q": "^1.4.1",
+    "walkdir": "0.0.10",
+    "xml": "^1.0.0",
+    "xml2js": "^0.4.10"
+  },
+  "devDependencies": {
+    "chai": "^3.2.0",
+    "mocha": "^2.2.5",
+    "tsd": "^0.6.3",
+    "typescript": "^1.5.3",
+    "typescript-formatter": "^0.4.3"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/robertknight/xar-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/robertknight/xar-js/issues"
+  },
+  "homepage": "https://github.com/robertknight/xar-js#readme"
+}
