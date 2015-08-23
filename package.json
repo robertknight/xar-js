@@ -16,6 +16,7 @@
   "author": "Robert Knight <robertknight@gmail.com>",
   "license": "BSD-2-Clause",
   "dependencies": {
+    "ctype": "^0.5.4",
     "q": "^1.4.1",
     "walkdir": "0.0.10",
     "xml": "^1.0.0",

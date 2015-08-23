@@ -50,7 +50,7 @@ export class FileReader implements Reader {
        name: path.basename(filePath),
        type: FileType.File,
        data: {
-         length: fileInfo.size
+         size: fileInfo.size
        }
      }
    }

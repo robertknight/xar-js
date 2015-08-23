@@ -5,15 +5,9 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import {createHash} from 'crypto';
-import {gzipSync} from 'zlib';
+import {deflateSync} from 'zlib';
 
-/** A reference to a section of data within the 'heap' section
- * of a xar archive.
- */
-export interface HeapRef {
-  offset: number;
-  size: number;
-}
+var ctype: any = require('ctype');
 
 export enum FileType {
   File,
@@ -21,6 +15,13 @@ export enum FileType {
 }
 
 enum Encoding {
+  // the xar file format supports several encodings, but
+  // only 'gzip' is supported.
+
+  // Note that despite being called 'gzip', the compressed
+  // file data is not actually in gzip format but is actually just
+  // compressed with deflate.
+  // In other words, the compressed data does not have a gzip header.
   Gzip
 }
 
@@ -33,12 +34,18 @@ export interface XarFile {
 export interface XarFileData {
   archivedChecksum?: string;
   extractedChecksum?: string;
-  length: number;
+
+  /** The offset of the file's data within the heap */
+  offset?: number;
+  /** The decompressed file size */
+  size: number;
+  /** The size of the compressed file within the heap */
+  length?: number;
 
   // Attributes which are set once the data has been
   // read and compressed
   encoding?: Encoding;
-  heapRef?: HeapRef;
+
   data?: Buffer;
 }
 
@@ -59,8 +66,12 @@ export interface Writer {
 }
 
 function buildXML(obj: Object) {
-  console.log('generating XML from', JSON.stringify(obj, null, 2));
-  let builder = new xml2js.Builder();
+  let builder = new xml2js.Builder({
+    xmldec: {
+      version: '1.0',
+      encoding: 'UTF-8'
+    }
+  });
   return builder.buildObject(obj);
 }
 
@@ -73,6 +84,24 @@ function parseXML(content: string) {
 	xml = result;
 	});
   return xml;
+}
+
+// a wrapper around a Writer which tracks the number
+// of bytes written
+class TrackingWriter implements Writer {
+  private dest: Writer;
+
+  bytesWritten: number;
+
+  constructor(dest: Writer) {
+    this.dest = dest;
+    this.bytesWritten = 0;
+  }
+
+  write(data: Buffer) {
+    this.dest.write(data);
+    this.bytesWritten += data.length;
+  }
 }
 
 // generates the table of contents entry for a file
@@ -94,7 +123,7 @@ function xarFileTOCEntry(file: XarFile): Object {
     assert(file.type === FileType.File);
 
     let compressedFile = <XarCompressedFile>file;
-    if (!compressedFile.data.heapRef) {
+    if (typeof compressedFile.data.offset !== 'number') {
       throw new Error(`Heap data missing for ${file.name}`);
     }
     if (!compressedFile.data.archivedChecksum) {
@@ -105,8 +134,8 @@ function xarFileTOCEntry(file: XarFile): Object {
     }
 
     entry.data = {
-      offset: compressedFile.data.heapRef.offset,
-      size: compressedFile.data.heapRef.size,
+      offset: compressedFile.data.offset,
+      size: compressedFile.data.size,
       length: compressedFile.data.length,
       ['archived-checksum']: {
         $: {
@@ -131,6 +160,8 @@ function xarFileTOCEntry(file: XarFile): Object {
 }
 
 enum DigestAlgorithm {
+  // the xar file format supports several digest algorithms.
+  // Only SHA-1 is currently supported by xar-js
   SHA1
 }
 
@@ -210,41 +241,75 @@ export class XarArchive {
     fileList.sort((a, b) => a.id - b.id);
 
     fileList.forEach((file, index) => {
-      if (!file.data.heapRef) {
-        // compress file data and set heap offset and length
+      if (typeof file.data.offset !== 'number') {
+        // compress file data, compute checksums and storage
+        // location within heap
         let reader = fileDataProvider(paths[index]);
-        let sourceData = reader.read(0, file.data.length);
-        assert(sourceData.length === file.data.length);
-        file.data.data = gzipSync(sourceData);
-        file.data.heapRef = {
-          offset: heapSize,
-          size: file.data.data.length
-        };
+        let sourceData = reader.read(0, file.data.size);
+        assert(sourceData.length === file.data.size);
+        file.data.data = deflateSync(sourceData);
+        file.data.length = file.data.data.length;
+        file.data.offset = heapSize;
         file.data.archivedChecksum = shasum(file.data.data);
         file.data.extractedChecksum = shasum(sourceData);
-        heapSize += file.data.heapRef.size;
+        heapSize += file.data.length;
       }
     });
 
     let tocXML = this.generateTOC();
     let tocXMLBuffer = new Buffer(tocXML, 'utf-8');
-    let compressedTOC = gzipSync(tocXMLBuffer);
+    let compressedTOC = deflateSync(tocXMLBuffer);
 
     // write header
-    // write TOC
+    let ctypeParser = new ctype.Parser({endian: 'big'});
+    ctypeParser.typedef('xar_header', [
+      { magic: {type: 'uint32_t'} },
+      { size:  {type: 'uint16_t'} },
+      { version: {type: 'uint16_t'}},
+      { toc_length_compressed: {type: 'uint64_t'} },
+      { toc_length_uncompressed: {type: 'uint64_t'} },
+      { cksum_alg: {type: 'uint32_t'}}
+    ]);
+
+    const XAR_HEADER_SIZE = 28;
+
+    // "xar!"
+    const XAR_MAGIC = 0x78617221;
+
+    // checksum algorithms
+    const XAR_CHECKSUM_SHA1 = 1;
+
+    let header = [
+      XAR_MAGIC,
+      XAR_HEADER_SIZE,
+      1 /* version */,
+      [0, compressedTOC.length],
+      [0, tocXMLBuffer.length],
+      XAR_CHECKSUM_SHA1
+    ]
+    let headerBuffer = new Buffer(XAR_HEADER_SIZE);
+    ctypeParser.writeData([{header: {type: 'xar_header', value: header}}], headerBuffer, 0);
+
+    writer.write(headerBuffer);
     writer.write(compressedTOC);
+
+    let heapWriter = new TrackingWriter(writer);
 
     // write TOC checksum
     let hash = createHash('sha1');
     hash.update(compressedTOC);
     let tocHash = hash.digest();
-    writer.write(tocHash);
-    
+    heapWriter.write(tocHash);
+
     // TODO - Write signature (if any)
 
     // write file content
     for (let file of fileList) {
-      writer.write(file.data.data);
+      // verify that file data is being written to expected
+      // location within the heap
+      assert(heapWriter.bytesWritten === file.data.offset);
+      assert(file.data.data.length === file.data.length);
+      heapWriter.write(file.data.data);
     }
   }
 
