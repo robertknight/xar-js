@@ -4,8 +4,8 @@ import * as xml2js from 'xml2js';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
-import {createHash} from 'crypto';
-import {deflateSync} from 'zlib';
+import {createHash, createSign} from 'crypto';
+import {deflateSync, inflateSync} from 'zlib';
 
 var ctype: any = require('ctype');
 
@@ -185,13 +185,98 @@ function walkFileTree(file: XarFile, visit: (path: string, file: XarFile) => any
   }
 }
 
+interface SignatureResources {
+  /** The PEM encoded certificate */
+  cert: string;
+  /** The PEM encoded private key for @p cert */
+  privateKey: string;
+  /*
+   * Additional certificates to include in the archive.
+   * These are the intermediate certificates between @p cert
+   * and the root certificate which is already trusted by the
+   * system.
+   */
+  additionalCerts: string[];
+}
+
+// minimum header size. If the archive uses a non-standard
+// checksum algorithm then it may be larger in order to store
+// the name of the algorithm
+const XAR_HEADER_SIZE = 28;
+const XAR_MAGIC = 0x78617221; // "xar!"
+
+// checksum algorithms
+const XAR_CHECKSUM_SHA1 = 1;
+
+// signature algorithms
+const RSA_SIGNATURE_SIZE = 256;
+
+interface XarHeader {
+  size: number;
+  version: number;
+  tocLengthCompressed: number;
+  tocLengthUncompressed: number;
+  checksumAlgorithm: number;
+}
+
+// strips the header and footer from a PEM-encoded
+// certificate
+function stripCertHeaderAndFooter(cert: string) {
+  return cert.split('\n').filter(line => {
+    return line.indexOf('----') === -1;
+  }).join('\n');
+}
+
 export class XarArchive {
+  private ctypeParser: any;
   private checksumAlgo: DigestAlgorithm;
   private files: XarFile[];
+  private signatureResources: SignatureResources;
+  private reader: Reader;
 
   constructor() {
     this.files = [];
     this.checksumAlgo = DigestAlgorithm.SHA1;
+
+    this.ctypeParser = new ctype.Parser({endian: 'big'});
+    this.ctypeParser.typedef('xar_header', [
+      { magic: {type: 'uint32_t'} },
+      { size:  {type: 'uint16_t'} },
+      { version: {type: 'uint16_t'}},
+      { toc_length_compressed: {type: 'uint64_t'} },
+      { toc_length_uncompressed: {type: 'uint64_t'} },
+      { cksum_alg: {type: 'uint32_t'}}
+    ]);
+  }
+
+  /** Open an existing archive */
+  open(reader: Reader) {
+    this.files = [];
+    this.reader = reader;
+  }
+
+  /** Return the table of contents from the current archive as an XML string */
+  tableOfContentsXML() {
+    let header = this.readHeader();
+    let compressedTOC = this.reader.read(header.size, header.tocLengthCompressed);
+
+    // verify checksum
+    if (header.checksumAlgorithm !== XAR_CHECKSUM_SHA1) {
+      throw new Error(`Unsupported table of contents checksum algorithm ${header.checksumAlgorithm}`);
+    }
+    let checksumSize = digestSize(DigestAlgorithm.SHA1);
+    let expectedChecksum = this.reader.read(header.size + header.tocLengthCompressed, checksumSize);
+    let actualChecksum = createHash('sha1').update(compressedTOC).digest();
+    if (!actualChecksum.equals(expectedChecksum)) {
+      throw new Error('Actual table of contents checksum does not match expected checksum');
+    }
+
+    // uncompress table of contents
+    let tocData = inflateSync(compressedTOC);
+    if (tocData.length !== header.tocLengthUncompressed) {
+      throw new Error(`Table of contents length (${tocData.length}) does not match size specified in header (${header.tocLengthUncompressed})`);
+    }
+    return tocData.toString('utf-8');
   }
 
   /** Add the metadata for a new file or directory tree to
@@ -202,6 +287,11 @@ export class XarArchive {
   addFile(file: XarFile) {
     assert(file);
     this.files.push(file);
+  }
+
+  /** Sets the certificates used to sign the generated archive. */
+  setCertificates(opts: SignatureResources) {
+      this.signatureResources = opts;
   }
 
   /** Generate the xar archive. Reads the data for the files that
@@ -222,6 +312,9 @@ export class XarArchive {
 
     // if there is a signature, increment the heap size
     // by the signature size
+    if (this.signatureResources) {
+      heapSize += RSA_SIGNATURE_SIZE;
+    }
 
     // create list of files to compress
     let fileList: XarCompressedFile[] = [];
@@ -260,25 +353,6 @@ export class XarArchive {
     let tocXMLBuffer = new Buffer(tocXML, 'utf-8');
     let compressedTOC = deflateSync(tocXMLBuffer);
 
-    // write header
-    let ctypeParser = new ctype.Parser({endian: 'big'});
-    ctypeParser.typedef('xar_header', [
-      { magic: {type: 'uint32_t'} },
-      { size:  {type: 'uint16_t'} },
-      { version: {type: 'uint16_t'}},
-      { toc_length_compressed: {type: 'uint64_t'} },
-      { toc_length_uncompressed: {type: 'uint64_t'} },
-      { cksum_alg: {type: 'uint32_t'}}
-    ]);
-
-    const XAR_HEADER_SIZE = 28;
-
-    // "xar!"
-    const XAR_MAGIC = 0x78617221;
-
-    // checksum algorithms
-    const XAR_CHECKSUM_SHA1 = 1;
-
     let header = [
       XAR_MAGIC,
       XAR_HEADER_SIZE,
@@ -288,7 +362,7 @@ export class XarArchive {
       XAR_CHECKSUM_SHA1
     ]
     let headerBuffer = new Buffer(XAR_HEADER_SIZE);
-    ctypeParser.writeData([{header: {type: 'xar_header', value: header}}], headerBuffer, 0);
+    this.ctypeParser.writeData([{header: {type: 'xar_header', value: header}}], headerBuffer, 0);
 
     writer.write(headerBuffer);
     writer.write(compressedTOC);
@@ -301,9 +375,17 @@ export class XarArchive {
     let tocHash = hash.digest();
     heapWriter.write(tocHash);
 
-    // TODO - Write signature (if any)
+    // write signature
+    if (this.signatureResources) {
+      let signer = createSign('RSA-SHA1');
+      signer.update(tocHash);
+      let signature: Buffer = <any>signer.sign(this.signatureResources.privateKey,
+        undefined /* return a Buffer */);
+      assert(signature.length === RSA_SIGNATURE_SIZE);
+      heapWriter.write(signature);
+    }
 
-    // write file content
+    // write compressed file content
     for (let file of fileList) {
       // verify that file data is being written to expected
       // location within the heap
@@ -311,6 +393,30 @@ export class XarArchive {
       assert(file.data.data.length === file.data.length);
       heapWriter.write(file.data.data);
     }
+  }
+
+  private readHeader(): XarHeader {
+    let buf = this.reader.read(0, XAR_HEADER_SIZE);
+    if (buf.length < XAR_HEADER_SIZE) {
+      throw new Error('Not a valid xar archive. Input length is less than xar archive header size');
+    }
+
+    let {header} = this.ctypeParser.readData([{header: {type: 'xar_header'}}], buf, 0);
+
+    if (header.magic !== XAR_MAGIC) {
+      throw new Error('Not a valid xar archive. Mime magic does not match "xar!"');
+    }
+    if (header.size < XAR_HEADER_SIZE) {
+      throw new Error(`Not a valid xar archive. Header size is smaller than ${XAR_HEADER_SIZE} bytes`);
+    }
+
+    return {
+        size: header.size,
+        version: header.version,
+        tocLengthCompressed: ctype.toAbs64(header.toc_length_compressed),
+        tocLengthUncompressed: ctype.toAbs64(header.toc_length_uncompressed),
+        checksumAlgorithm: header.cksum_alg
+    };
   }
 
   private generateTOC() {
@@ -334,7 +440,30 @@ export class XarArchive {
     };
     heapSize += checksumSize;
 
-    // TODO - Signature
+    // signature
+    if (this.signatureResources) {
+      let certEntries = [
+        stripCertHeaderAndFooter(this.signatureResources.cert),
+        ...this.signatureResources.additionalCerts.map(stripCertHeaderAndFooter)
+      ];
+      let signatureSize = RSA_SIGNATURE_SIZE;
+      tocRoot.signature = {
+        $: {
+          style: 'RSA'
+        },
+        offset: heapSize,
+        size: signatureSize,
+        'KeyInfo': {
+          $: {
+            xmlns: 'http://www.w3.org/2000/09/xmldsig'
+          },
+          'X509Data': {
+            X509Certificate: certEntries
+          }
+        }
+      };
+      heapSize += signatureSize;
+    }
 
     // file forest
     tocRoot.file = this.files.map(xarFileTOCEntry);
