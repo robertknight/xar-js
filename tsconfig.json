@@ -12,17 +12,13 @@
     "filesGlob": [
         "./**/*.ts",
         "./**/*.tsx",
-        "!./node_modules/**/*"
+        "!./node_modules/**/*",
+        "!./typings/**/*"
     ],
     "files": [
+        "./scripts/generate-cert-chain.ts",
         "./src/lib.ts",
         "./src/util.ts",
-        "./test/create.ts",
-        "./typings/chai/chai.d.ts",
-        "./typings/mocha/mocha.d.ts",
-        "./typings/node/node.d.ts",
-        "./typings/tsd.d.ts",
-        "./typings/walkdir.d.ts",
-        "./typings/xml2js/xml2js.d.ts"
+        "./test/create.ts"
     ]
 }
