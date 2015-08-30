@@ -4,9 +4,9 @@ import * as xml2js from 'xml2js';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
-import {createHash, createSign} from 'crypto';
+import { createHash, createSign } from 'crypto';
 
-import {Reader, Writer} from './io';
+import { Reader, Writer } from './io';
 
 var ctype: any = require('ctype');
 
@@ -96,12 +96,12 @@ function buildXML(obj: Object) {
 
 function parseXML(content: string) {
   let xml: Object;
-  xml2js.parseString(content, {async: false}, (err, result) => {
-  	if (err) {
-	  throw err;
-	}
-	xml = result;
-	});
+  xml2js.parseString(content, { async: false },(err, result) => {
+    if (err) {
+      throw err;
+    }
+    xml = result;
+  });
   return xml;
 }
 
@@ -190,9 +190,9 @@ function digestSize(algo: DigestAlgorithm) {
 }
 
 function shasum(data: Buffer): string {
-    let hasher = createHash('sha1');
-    hasher.update(data);
-    return hasher.digest('hex');
+  let hasher = createHash('sha1');
+  hasher.update(data);
+  return hasher.digest('hex');
 }
 
 function walkFileTree(file: XarFile, visit: (path: string, file: XarFile) => any, dirPath: string = '') {
@@ -273,7 +273,7 @@ function bufferEquals(a: Buffer, b: Buffer) {
   if (a.length !== b.length) {
     return false;
   }
-  for (let i=0; i < a.length; i++) {
+  for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i]) {
       return false;
     }
@@ -301,14 +301,14 @@ export class XarArchive {
     this.files = [];
     this.checksumAlgo = DigestAlgorithm.SHA1;
 
-    this.ctypeParser = new ctype.Parser({endian: 'big'});
+    this.ctypeParser = new ctype.Parser({ endian: 'big' });
     this.ctypeParser.typedef('xar_header', [
-      { magic: {type: 'uint32_t'} },
-      { size:  {type: 'uint16_t'} },
-      { version: {type: 'uint16_t'}},
-      { toc_length_compressed: {type: 'uint64_t'} },
-      { toc_length_uncompressed: {type: 'uint64_t'} },
-      { cksum_alg: {type: 'uint32_t'}}
+      { magic: { type: 'uint32_t' } },
+      { size: { type: 'uint16_t' } },
+      { version: { type: 'uint16_t' } },
+      { toc_length_compressed: { type: 'uint64_t' } },
+      { toc_length_uncompressed: { type: 'uint64_t' } },
+      { cksum_alg: { type: 'uint32_t' } }
     ]);
   }
 
@@ -355,7 +355,7 @@ export class XarArchive {
 
   /** Sets the certificates used to sign the generated archive. */
   setCertificates(opts: SignatureResources) {
-      this.signatureResources = opts;
+    this.signatureResources = opts;
   }
 
   /** Generate the xar archive. Reads the data for the files that
@@ -369,7 +369,7 @@ export class XarArchive {
     // assign IDs to all files
     let maxID = 0;
     this.files.forEach(file => {
-      walkFileTree(file, (_, file) => {
+      walkFileTree(file,(_, file) => {
         maxID = file.id ? Math.max(file.id, maxID) : maxID;
       });
     });
@@ -384,7 +384,7 @@ export class XarArchive {
     let fileList: XarCompressedFile[] = [];
     let paths: string[] = [];
     this.files.forEach(file => {
-      walkFileTree(file, (path, file) => {
+      walkFileTree(file,(path, file) => {
         if (!file.id) {
           ++maxID;
           file.id = maxID;
@@ -426,7 +426,7 @@ export class XarArchive {
       XAR_CHECKSUM_SHA1
     ]
     let headerBuffer = new Buffer(XAR_HEADER_SIZE);
-    this.ctypeParser.writeData([{header: {type: 'xar_header', value: header}}], headerBuffer, 0);
+    this.ctypeParser.writeData([{ header: { type: 'xar_header', value: header } }], headerBuffer, 0);
 
     writer.write(headerBuffer);
     writer.write(compressedTOC);
@@ -466,7 +466,7 @@ export class XarArchive {
       throw new Error('Not a valid xar archive. Input length is less than xar archive header size');
     }
 
-    let {header} = this.ctypeParser.readData([{header: {type: 'xar_header'}}], buf, 0);
+    let {header } = this.ctypeParser.readData([{ header: { type: 'xar_header' } }], buf, 0);
 
     if (header.magic !== XAR_MAGIC) {
       throw new Error('Not a valid xar archive. Mime magic does not match "xar!"');
@@ -476,11 +476,11 @@ export class XarArchive {
     }
 
     return {
-        size: header.size,
-        version: header.version,
-        tocLengthCompressed: ctype.toAbs64(header.toc_length_compressed),
-        tocLengthUncompressed: ctype.toAbs64(header.toc_length_uncompressed),
-        checksumAlgorithm: header.cksum_alg
+      size: header.size,
+      version: header.version,
+      tocLengthCompressed: ctype.toAbs64(header.toc_length_compressed),
+      tocLengthUncompressed: ctype.toAbs64(header.toc_length_uncompressed),
+      checksumAlgorithm: header.cksum_alg
     };
   }
 
