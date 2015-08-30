@@ -14,7 +14,7 @@ export enum FileType {
   Directory
 }
 
-enum Encoding {
+export enum Encoding {
   // the xar file format supports several encodings, but
   // only 'gzip' is supported.
 
@@ -25,14 +25,23 @@ enum Encoding {
   Gzip
 }
 
+/** Base interface for entries in a xar archive.
+ * Two types of entries are supported, files represented
+ * by XarCompressedFile and directories, represented by
+ * XarDirectory
+ */
 export interface XarFile {
+  /** ID of the file entry. This must be unique within an archive. */
   id?: number;
+  /** Filename of the file entry, not including the path. */
   name: string;
   type: FileType;
 }
 
 export interface XarFileData {
+  /** The checksum of the compressed file data in the archive. */
   archivedChecksum?: string;
+  /** The checksum of the uncompressed file */
   extractedChecksum?: string;
 
   /** The offset of the file's data within the heap */
@@ -46,6 +55,9 @@ export interface XarFileData {
   // read and compressed
   encoding?: Encoding;
 
+  /** The compressed data for the entry. The encoding is specified
+   * by the 'encoding' property.
+   */
   data?: Buffer;
 }
 
@@ -54,13 +66,20 @@ export interface XarCompressedFile extends XarFile {
 }
 
 export interface XarDirectory extends XarFile {
+  /** Files or directories within this directory. */
   children: XarFile[];
 }
 
+/** Interface used by XarArchive to read
+ * data from a file or other data source.
+ */
 export interface Reader {
   read(offset: number, length: number): Buffer;
 }
 
+/** Interface used by XarArchive to write data
+ * to a file or other data sink.
+ */
 export interface Writer {
   write(data: Buffer): void;
 }
@@ -185,8 +204,13 @@ function walkFileTree(file: XarFile, visit: (path: string, file: XarFile) => any
   }
 }
 
-interface SignatureResources {
-  /** The PEM encoded certificate */
+/** Specifies the certificates and private key used
+ * to sign the archive.
+ */
+export interface SignatureResources {
+  /** The PEM encoded leaf certificate, corresponding to
+   * the private key.
+   */
   cert: string;
   /** The PEM encoded private key for @p cert */
   privateKey: string;
@@ -195,6 +219,12 @@ interface SignatureResources {
    * These are the intermediate certificates between @p cert
    * and the root certificate which is already trusted by the
    * system.
+   *
+   * Note that the order in which the certificates are specified
+   * is important when building Safari extensions. The intermediate
+   * certificate used to sign the leaf certificate must come first,
+   * followed by other certificates in the order they occur in
+   * the verification chain.
    */
   additionalCerts: string[];
 }
@@ -227,6 +257,9 @@ function stripCertHeaderAndFooter(cert: string) {
   }).join('\n');
 }
 
+/** Class for reading and writing xar archives.
+ *
+ */
 export class XarArchive {
   private ctypeParser: any;
   private checksumAlgo: DigestAlgorithm;
@@ -280,7 +313,8 @@ export class XarArchive {
   }
 
   /** Add the metadata for a new file or directory tree to
-   * the archive.
+   * the archive. To create a XarFile instance from a file on disk,
+   * see the walk() function in the util module.
    *
    * The file's data is not actually read until generate() is called.
    */

@@ -40,9 +40,17 @@ interface CmdOptions {
 
 commander
   .command('create <archive> [files...]')
-  .description('Create a xar archive')
-  .option('-c, --cert [path]', 'Path to a certificate to include', collect, [])
-  .option('-p, --private-key [file]', 'Path to private key to sign archive with')
+  .description(`Create a xar archive containing [files].
+
+  If the --cert and --private-key options are specified, the
+  resulting archive will be signed using the specified certificates.
+
+  Note that the order in which the certificates are specified is important.
+  The leaf certificate must be specified first, followed by intermediate
+  certificates in the order they occur in the certificate chain.
+`)
+  .option('-c, --cert [path]', 'Path to a certificate (in PEM format) to include', collect, [])
+  .option('-p, --private-key [file]', 'Path to private key (in PEM format) to sign archive with')
   .action((archive: string, files: string[], opts: CmdOptions) => {
     generateArchive(archive, files, {
       certs: opts['cert'],
