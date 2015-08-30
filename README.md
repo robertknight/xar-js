@@ -3,7 +3,7 @@
 
 xar-js is a JavaScript library and command-line utility for reading and writing [xar archives](https://en.wikipedia.org/wiki/Xar_%28archiver%29).
 
-It was originally written to facilitate automated building of Safari Extensions without having to manually build the extension using Extension Builder.
+It was originally written to facilitate automated building of Safari Extensions.
 
 ## Installation
 
