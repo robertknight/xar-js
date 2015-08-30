@@ -373,12 +373,13 @@ export class XarArchive {
     let hash = createHash('sha1');
     hash.update(compressedTOC);
     let tocHash = hash.digest();
+    assert(tocHash.length === digestSize(DigestAlgorithm.SHA1));
     heapWriter.write(tocHash);
 
     // write signature
     if (this.signatureResources) {
-      let signer = createSign('RSA-SHA1');
-      signer.update(tocHash);
+      let signer = createSign('SHA1');
+      signer.update(compressedTOC);
       let signature: Buffer = <any>signer.sign(this.signatureResources.privateKey,
         undefined /* return a Buffer */);
       assert(signature.length === RSA_SIGNATURE_SIZE);
@@ -420,9 +421,12 @@ export class XarArchive {
   }
 
   private generateTOC() {
+    let creationTime = new Date();
     let tocStruct: any = {
       xar: {
-        toc: {}
+        toc: {
+          'creation-time': creationTime.toISOString()
+        }
       }
     };
 
@@ -442,11 +446,17 @@ export class XarArchive {
 
     // signature
     if (this.signatureResources) {
+      // 'signature-creation-time' is '%1.f' formatted seconds since
+      // 2001-01-01T00:00:00Z
+      let signatureCreationEpoch = new Date('2001-01-01T00:00:00Z');
+      let signatureTimestamp = (creationTime.getTime() - signatureCreationEpoch.getTime()) / 1000.0
+
       let certEntries = [
         stripCertHeaderAndFooter(this.signatureResources.cert),
         ...this.signatureResources.additionalCerts.map(stripCertHeaderAndFooter)
       ];
       let signatureSize = RSA_SIGNATURE_SIZE;
+      tocRoot['signature-creation-time'] = signatureTimestamp;
       tocRoot.signature = {
         $: {
           style: 'RSA'
