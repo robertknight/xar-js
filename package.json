@@ -21,6 +21,7 @@
   "dependencies": {
     "commander": "^2.8.1",
     "ctype": "^0.5.4",
+    "pako": "^0.2.7",
     "q": "^1.4.1",
     "walkdir": "0.0.10",
     "xml": "^1.0.0",

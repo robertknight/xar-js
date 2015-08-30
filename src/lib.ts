@@ -5,11 +5,15 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import {createHash, createSign} from 'crypto';
-import {deflateSync, inflateSync} from 'zlib';
 
 import {Reader, Writer} from './io';
 
 var ctype: any = require('ctype');
+
+// use pako for synchronous zlib compression/decompression
+// rather than Node's zlib.{inflateSync, deflateSync} for
+// compatibility with Node <= 0.10.x
+var pako = require('pako');
 
 export enum FileType {
   File,
@@ -70,6 +74,14 @@ export interface XarCompressedFile extends XarFile {
 export interface XarDirectory extends XarFile {
   /** Files or directories within this directory. */
   children: XarFile[];
+}
+
+function deflateSync(buf: Buffer) {
+  return new Buffer(pako.deflate(buf));
+}
+
+function inflateSync(buf: Buffer) {
+  return new Buffer(pako.inflate(buf));
 }
 
 function buildXML(obj: Object) {
