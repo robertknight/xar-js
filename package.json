@@ -1,6 +1,6 @@
 {
   "name": "xar-js",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "JS library and command-line utility for reading and writing 'xar' archives (used by Safari extensions)",
   "main": "build/src/lib.js",
   "scripts": {

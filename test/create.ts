@@ -3,10 +3,22 @@
 import {expect} from 'chai';
 import * as fs from 'fs';
 import * as os from 'os';
-import {generateCertificateChain} from '../scripts/generate-cert-chain';
+import * as xml2js from 'xml2js';
 
+import {generateCertificateChain} from '../scripts/generate-cert-chain';
 import {XarArchive} from '../src/lib';
 import {walk, FileReader, FileWriter} from '../src/util';
+
+function parseXML(content: string) {
+  let xml: Object;
+  xml2js.parseString(content, {async: false}, (err, result) => {
+  	if (err) {
+	  throw err;
+	}
+	xml = result;
+	});
+  return xml;
+}
 
 describe('archive creation', () => {
   it('should create a xar archive', () => {
@@ -26,6 +38,10 @@ describe('archive creation', () => {
   });
 });
 
+function isValidBase64(content: string) {
+    return content.match(/^[0-9a-zA-Z/+=]*$/) !== null;
+}
+
 describe('archive signing', () => {
   let tmpDir = os.tmpdir();
   let leafPrefix = `${tmpDir}/leaf`;
@@ -42,7 +58,12 @@ describe('archive signing', () => {
     const writer = new FileWriter('test-sign.safariextz');
     archive.addFile(extensionDir);
 
-    let leafCert = fs.readFileSync(`${leafPrefix}.crt`, 'utf-8');
+    // add extra content before and after cert to verify that
+    // this is ignored
+    let leafCert = 'content before cert\n' +
+                    fs.readFileSync(`${leafPrefix}.crt`, 'utf-8') +
+                    '\ncontent after cert';
+
     let intermediate = fs.readFileSync(`${intermediatePrefix}.crt`, 'utf-8');
     let privateKey = fs.readFileSync(`${leafPrefix}.key`, 'utf-8');
     archive.setCertificates({
@@ -53,9 +74,17 @@ describe('archive signing', () => {
 
     archive.generate(writer, path => new FileReader('./test/' + path));
 
+    // read back archive, check that signature data appears in
+    // XML header
     const readArchive = new XarArchive();
     readArchive.open(new FileReader('test-sign.safariextz'));
-    let toc = readArchive.tableOfContentsXML();
-    expect(toc.indexOf('<signature')).to.not.equal(-1);
+    let tocXMLTree: any = parseXML(readArchive.tableOfContentsXML());
+    let signature = tocXMLTree.xar.toc[0].signature[0];
+    expect(signature).to.be.ok;
+    let certs: string[] = signature.KeyInfo[0].X509Data[0].X509Certificate
+      .map((cert: string) => cert.replace(/\n/gm, ''));
+    expect(certs).to.be.ok;
+    expect(certs.length).to.equal(2);
+    certs.forEach(cert => expect(isValidBase64(cert)).to.be.true);
   });
 });

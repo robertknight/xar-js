@@ -95,7 +95,7 @@ function buildXML(obj: Object) {
 }
 
 function parseXML(content: string) {
-  let xml: string;
+  let xml: Object;
   xml2js.parseString(content, {async: false}, (err, result) => {
   	if (err) {
 	  throw err;
@@ -251,14 +251,30 @@ interface XarHeader {
 
 // strips the header and footer from a PEM-encoded
 // certificate
-function stripCertHeaderAndFooter(cert: string) {
-  return cert.split('\n').filter(line => {
-    return line.indexOf('----') === -1;
-  }).join('\n');
+function extractPEMSection(cert: string, sectionType: string) {
+  let inSection = false;
+  return cert.split('\n').reduce((sectionLines, line) => {
+    if (inSection) {
+      if (line.indexOf('----END ' + sectionType) !== -1) {
+        inSection = false;
+      } else {
+        sectionLines.push(line);
+      }
+    } else if (line.indexOf('----BEGIN ' + sectionType) !== -1) {
+      inSection = true;
+    }
+    return sectionLines;
+  }, []).join('\n');
 }
 
 /** Class for reading and writing xar archives.
  *
+ * To read an existing archive, create an instance and call
+ * open() passing in a Reader implementation to read archive data from.
+ *
+ * To generate an archive, create an instance, call addFile() to add
+ * files to the archive and generate() to output the archive to
+ * a Writer.
  */
 export class XarArchive {
   private ctypeParser: any;
@@ -485,9 +501,10 @@ export class XarArchive {
       let signatureCreationEpoch = new Date('2001-01-01T00:00:00Z');
       let signatureTimestamp = (creationTime.getTime() - signatureCreationEpoch.getTime()) / 1000.0
 
+      let extractCertSection = (pemFile: string) => extractPEMSection(pemFile, 'CERTIFICATE');
       let certEntries = [
-        stripCertHeaderAndFooter(this.signatureResources.cert),
-        ...this.signatureResources.additionalCerts.map(stripCertHeaderAndFooter)
+        extractCertSection(this.signatureResources.cert),
+        ...this.signatureResources.additionalCerts.map(extractCertSection)
       ];
       let signatureSize = RSA_SIGNATURE_SIZE;
       tocRoot['signature-creation-time'] = signatureTimestamp;
