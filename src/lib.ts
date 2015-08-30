@@ -267,6 +267,20 @@ function extractPEMSection(cert: string, sectionType: string) {
   }, []).join('\n');
 }
 
+// Buffer.equals() is available in Node >= 0.11.
+// This is provided for compatibility with Node 0.10
+function bufferEquals(a: Buffer, b: Buffer) {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i=0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /** Class for reading and writing xar archives.
  *
  * To read an existing archive, create an instance and call
@@ -316,7 +330,7 @@ export class XarArchive {
     let checksumSize = digestSize(DigestAlgorithm.SHA1);
     let expectedChecksum = this.reader.read(header.size + header.tocLengthCompressed, checksumSize);
     let actualChecksum = createHash('sha1').update(compressedTOC).digest();
-    if (!actualChecksum.equals(expectedChecksum)) {
+    if (!bufferEquals(actualChecksum, expectedChecksum)) {
       throw new Error('Actual table of contents checksum does not match expected checksum');
     }
 
