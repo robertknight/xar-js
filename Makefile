@@ -2,6 +2,9 @@ NODE_BIN_DIR=node_modules/.bin
 
 all: build
 
+clean:
+	rm -rf build
+
 build:
 	$(NODE_BIN_DIR)/tsc
 

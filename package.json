@@ -1,11 +1,14 @@
 {
   "name": "xar-js",
   "version": "0.1.0",
-  "description": "JS library for reading and writing 'xar' archives (used by Safari extensions)",
+  "description": "JS library and command-line utility for reading and writing 'xar' archives (used by Safari extensions)",
   "main": "build/src/lib.js",
   "scripts": {
     "prepublish": "make",
     "test": "make test"
+  },
+  "bin": {
+    "xarjs": "./xarjs"
   },
   "keywords": [
     "xar",
@@ -34,6 +37,10 @@
   "directories": {
     "test": "test"
   },
+  "files": [
+    "build",
+    "xarjs"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/robertknight/xar-js.git"
