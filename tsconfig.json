@@ -18,6 +18,7 @@
     "files": [
         "./scripts/generate-cert-chain.ts",
         "./src/cli.ts",
+        "./src/io.ts",
         "./src/lib.ts",
         "./src/util.ts",
         "./test/create.ts"

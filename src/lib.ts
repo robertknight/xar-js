@@ -7,6 +7,8 @@ import * as path from 'path';
 import {createHash, createSign} from 'crypto';
 import {deflateSync, inflateSync} from 'zlib';
 
+import {Reader, Writer} from './io';
+
 var ctype: any = require('ctype');
 
 export enum FileType {
@@ -68,20 +70,6 @@ export interface XarCompressedFile extends XarFile {
 export interface XarDirectory extends XarFile {
   /** Files or directories within this directory. */
   children: XarFile[];
-}
-
-/** Interface used by XarArchive to read
- * data from a file or other data source.
- */
-export interface Reader {
-  read(offset: number, length: number): Buffer;
-}
-
-/** Interface used by XarArchive to write data
- * to a file or other data sink.
- */
-export interface Writer {
-  write(data: Buffer): void;
 }
 
 function buildXML(obj: Object) {

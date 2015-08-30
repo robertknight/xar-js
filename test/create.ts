@@ -2,12 +2,14 @@
 
 import {expect} from 'chai';
 import * as fs from 'fs';
+import * as path from 'path';
 import * as os from 'os';
 import * as xml2js from 'xml2js';
 
 import {generateCertificateChain} from '../scripts/generate-cert-chain';
 import {XarArchive} from '../src/lib';
-import {walk, FileReader, FileWriter} from '../src/util';
+import {FileReader, FileWriter} from '../src/io';
+import {walk} from '../src/util';
 
 function parseXML(content: string) {
   let xml: Object;
@@ -24,15 +26,16 @@ describe('archive creation', () => {
   it('should create a xar archive', () => {
     const extensionDir = walk('./test/testextension.safariextension');
 
+    const archivePath = path.join(os.tmpdir(), 'test-create.safariextz');
     const archive = new XarArchive();
-    const writer = new FileWriter('test-create.safariextz');
+    const writer = new FileWriter(archivePath);
     archive.addFile(extensionDir);
     archive.generate(writer, path => new FileReader('./test/' + path));
 
     // read the archive and verify that it at least returns
     // a non-empty table of contents
     const readArchive = new XarArchive();
-    readArchive.open(new FileReader('test-create.safariextz'));
+    readArchive.open(new FileReader(archivePath));
     let toc = readArchive.tableOfContentsXML();
     expect(toc.length).to.be.greaterThan(0);
   });
@@ -54,8 +57,9 @@ describe('archive signing', () => {
 
   it('should add signature data to TOC', () => {
     const extensionDir = walk('./test/testextension.safariextension');
+    const archivePath = path.join(os.tmpdir(), 'test-sign.safariextz');
     const archive = new XarArchive();
-    const writer = new FileWriter('test-sign.safariextz');
+    const writer = new FileWriter(archivePath);
     archive.addFile(extensionDir);
 
     // add extra content before and after cert to verify that
@@ -77,7 +81,7 @@ describe('archive signing', () => {
     // read back archive, check that signature data appears in
     // XML header
     const readArchive = new XarArchive();
-    readArchive.open(new FileReader('test-sign.safariextz'));
+    readArchive.open(new FileReader(archivePath));
     let tocXMLTree: any = parseXML(readArchive.tableOfContentsXML());
     let signature = tocXMLTree.xar.toc[0].signature[0];
     expect(signature).to.be.ok;

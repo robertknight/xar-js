@@ -4,34 +4,7 @@ import * as path from 'path';
 import {FileType,
         XarFile,
         XarDirectory,
-        XarCompressedFile,
-        Reader, Writer} from './lib';
-
-export class FileWriter implements Writer {
-  private fd: number;
-
-  constructor(path: string) {
-    this.fd = fs.openSync(path, 'w');
-  }
-
-  write(data: Buffer) {
-    fs.writeSync(this.fd, data, 0, data.length, null /* write from current pos */);
-  }
-}
-
-export class FileReader implements Reader {
-  private fd: number;
-
-  constructor(path: string) {
-    this.fd = fs.openSync(path, 'r');
-  }
-
-  read(offset: number, length: number): Buffer {
-    let buf = new Buffer(length);
-    fs.readSync(this.fd, buf, 0, length, offset);
-    return buf;
-  }
-}
+        XarCompressedFile} from './lib';
 
 /** Process a file or directory tree and create a XarFile representing
  * its contents.

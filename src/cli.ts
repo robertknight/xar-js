@@ -4,7 +4,8 @@ import * as commander from 'commander';
 import * as fs from 'fs';
 
 import {XarArchive} from '../src/lib';
-import {walk, FileReader, FileWriter} from '../src/util';
+import {walk} from '../src/util';
+import {FileReader, FileWriter} from '../src/io';
 
 interface GenerateOptions {
   certs?: string[],
