@@ -48,5 +48,8 @@
   "bugs": {
     "url": "https://github.com/robertknight/xar-js/issues"
   },
-  "homepage": "https://github.com/robertknight/xar-js#readme"
+  "homepage": "https://github.com/robertknight/xar-js#readme",
+  "engines": {
+    "node": ">=0.12"
+  }
 }

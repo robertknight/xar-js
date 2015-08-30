@@ -3,3 +3,6 @@ sudo: false
 cache:
  directories:
  - node_modules
+node_js:
+  - "0.12"
+  - "iojs"
