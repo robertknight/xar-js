@@ -7,6 +7,8 @@ It was originally written to facilitate automated building of Safari Extensions.
 
 ## Installation
 
+_xar-js_ currently requires Node.js >= 0.12 or iojs.
+
 `npm install -g xar-js`
 
 ## Usage
