@@ -1,4 +1,5 @@
 # xar-js
+[![Build Status](https://travis-ci.org/robertknight/xar-js.png?branch=master)](https://travis-ci.org/robertknight/xar-js)
 
 xar-js is a JavaScript library and command-line utility for reading and writing [xar archives](https://en.wikipedia.org/wiki/Xar_%28archiver%29).
 
