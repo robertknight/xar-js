@@ -47,6 +47,9 @@ to generate `.safariextz` extensions.
 4. Use `xarjs create` to generate a `.safariextz` archive from your
    `.safariextension` directory containing the files for the extension:
 
+   _Note: The order of the --cert arguments is important. The leaf certificate must be specified first,
+   followed by the intermediate and then the root._
+
    ````
    xarjs create extension.safariextz --cert cert.pem --cert apple-intermediate.pem --cert apple-root.pem --private-key privatekey.pem extension.safariextension
    ````
