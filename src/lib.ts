@@ -249,8 +249,11 @@ interface XarHeader {
   checksumAlgorithm: number;
 }
 
-// strips the header and footer from a PEM-encoded
-// certificate
+// Extracts the contents of a Base64-encoded section of
+// a PEM file.
+//
+// Returns the lines between the section demarcated by
+// 'BEGIN <sectionType> ... END <sectionType>' in 'cert'
 function extractPEMSection(cert: string, sectionType: string) {
   let inSection = false;
   return cert.split('\n').reduce((sectionLines, line) => {
@@ -265,6 +268,14 @@ function extractPEMSection(cert: string, sectionType: string) {
     }
     return sectionLines;
   }, []).join('\n');
+}
+
+function extractCertSection(pemFile: string) {
+  let cert = extractPEMSection(pemFile, 'CERTIFICATE')
+  if (cert.length === 0) {
+    throw new Error(`Missing expected BEGIN CERTIFICATE ... END CERTIFICATE section in '${pemFile}'`);
+  }
+  return cert;
 }
 
 // Buffer.equals() is available in Node >= 0.11.
@@ -515,8 +526,7 @@ export class XarArchive {
       let signatureCreationEpoch = new Date('2001-01-01T00:00:00Z');
       let signatureTimestamp = (creationTime.getTime() - signatureCreationEpoch.getTime()) / 1000.0
 
-      let extractCertSection = (pemFile: string) => extractPEMSection(pemFile, 'CERTIFICATE');
-      let certEntries = [
+      let certEntries: string[] = [
         extractCertSection(this.signatureResources.cert),
         ...this.signatureResources.additionalCerts.map(extractCertSection)
       ];
