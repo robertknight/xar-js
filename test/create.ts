@@ -22,15 +22,19 @@ function parseXML(content: string) {
   return xml;
 }
 
+function fixturePath(name: string) {
+  return './test/fixtures/' + name;
+}
+
 describe('archive creation',() => {
   it('should create a xar archive',() => {
-    const extensionDir = walk('./test/testextension.safariextension');
+    const extensionDir = walk(fixturePath('testextension.safariextension'));
 
     const archivePath = path.join(os.tmpdir(), 'test-create.safariextz');
     const archive = new XarArchive();
     const writer = new FileWriter(archivePath);
     archive.addFile(extensionDir);
-    archive.generate(writer, path => new FileReader('./test/' + path));
+    archive.generate(writer, path => new FileReader(fixturePath(path)));
 
     // read the archive and verify that it at least returns
     // a non-empty table of contents
@@ -41,12 +45,12 @@ describe('archive creation',() => {
   });
 
   it('should create a xar archive with an empty file',() => {
-    const emptyFile = walk('./test/empty');
+    const emptyFile = walk(fixturePath('empty'));
     const archivePath = path.join(os.tmpdir(), 'test-empty.xar');
     const writer = new FileWriter(archivePath);
     const archive = new XarArchive();
     archive.addFile(emptyFile);
-    archive.generate(writer, path => new FileReader('./test/' + path));
+    archive.generate(writer, path => new FileReader(fixturePath(path)));
     const readArchive = new XarArchive();
     readArchive.open(new FileReader(archivePath));
     let toc = readArchive.tableOfContentsXML();
@@ -68,7 +72,7 @@ describe('archive signing',() => {
   });
 
   it('should add signature data to TOC',() => {
-    const extensionDir = walk('./test/testextension.safariextension');
+    const extensionDir = walk(fixturePath('testextension.safariextension'));
     const archivePath = path.join(os.tmpdir(), 'test-sign.safariextz');
     const archive = new XarArchive();
     const writer = new FileWriter(archivePath);
@@ -88,7 +92,7 @@ describe('archive signing',() => {
       additionalCerts: [intermediate]
     });
 
-    archive.generate(writer, path => new FileReader('./test/' + path));
+    archive.generate(writer, path => new FileReader(fixturePath(path)));
 
     // read back archive, check that signature data appears in
     // XML header
