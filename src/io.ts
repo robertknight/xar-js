@@ -35,6 +35,13 @@ export class FileReader implements Reader {
 
   read(offset: number, length: number): Buffer {
     let buf = new Buffer(length);
+    if (length === 0) {
+      // work around fs.readSync() error reading 0 bytes from
+      // a 0-length buffer.
+      // See https://github.com/nodejs/node-v0.x-archive/issues/5685
+      return buf;
+    }
+
     fs.readSync(this.fd, buf, 0, length, offset);
     return buf;
   }

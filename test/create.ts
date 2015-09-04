@@ -39,6 +39,18 @@ describe('archive creation',() => {
     let toc = readArchive.tableOfContentsXML();
     expect(toc.length).to.be.greaterThan(0);
   });
+
+  it('should create a xar archive with an empty file',() => {
+    const emptyFile = walk('./test/empty');
+    const archivePath = path.join(os.tmpdir(), 'test-empty.xar');
+    const writer = new FileWriter(archivePath);
+    const archive = new XarArchive();
+    archive.addFile(emptyFile);
+    archive.generate(writer, path => new FileReader('./test/' + path));
+    const readArchive = new XarArchive();
+    readArchive.open(new FileReader(archivePath));
+    let toc = readArchive.tableOfContentsXML();
+  });
 });
 
 function isValidBase64(content: string) {
