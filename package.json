@@ -51,6 +51,6 @@
   },
   "homepage": "https://github.com/robertknight/xar-js#readme",
   "engines": {
-    "node": ">=0.12"
+    "node": ">=0.10"
   }
 }
