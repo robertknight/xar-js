@@ -40,7 +40,7 @@ to generate `.safariextz` extensions.
    to sign your developer certificate from Keychain Access.
 
    These are the 'Apple Worldwide Developer Relations Certification Authority' (usually in your login keychain) and the 'Apple Root CA' certificate (usually in the 'System Roots' section).
-   (These are named `apple-intermdiate.pem` and `apple-root.pem`
+   (These are named `apple-intermediate.pem` and `apple-root.pem`
     in the following instructions).
 
    In the export options dialog, select the Privacy Enhanced Mail (PEM) format.
