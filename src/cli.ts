@@ -16,7 +16,7 @@ function generateArchive(archivePath: string, files: string[], opts: GenerateOpt
   let writer = new FileWriter(archivePath);
   let archive = new XarArchive();
   for (let file of files) {
-    archive.addFile(walk(file));
+    archive.addFile(walk(file, true));
   }
   if (opts.privateKey) {
       let privateKey = fs.readFileSync(opts.privateKey, 'utf-8');
