@@ -7,7 +7,8 @@
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
         "outDir": "build",
-        "noEmitOnError": true
+        "noEmitOnError": true,
+        "strictNullChecks": true
     },
     "filesGlob": [
         "./**/*.ts",

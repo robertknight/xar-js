@@ -10,7 +10,7 @@ import { FileReader, FileWriter } from '../src/io';
 import { walk } from '../src/util';
 
 function parseXML(content: string) {
-  let xml: Object;
+  let xml: Object = null as any;
   xml2js.parseString(content, { async: false },(err, result) => {
     if (err) {
       throw err;

@@ -16,7 +16,7 @@ function generateArchive(archivePath: string, files: string[], opts: GenerateOpt
   for (let file of files) {
     archive.addFile(walk(file));
   }
-  if (opts.privateKey) {
+  if (opts.privateKey && opts.certs) {
       let privateKey = fs.readFileSync(opts.privateKey, 'utf-8');
       let certs = opts.certs.map(certPath => fs.readFileSync(certPath, 'utf-8'));
       archive.setCertificates({

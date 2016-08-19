@@ -98,7 +98,7 @@ function buildXML(obj: Object) {
 }
 
 function parseXML(content: string) {
-  let xml: Object;
+  let xml: Object = null as any;
   xml2js.parseString(content, { async: false },(err, result) => {
     if (err) {
       throw err;
@@ -200,7 +200,7 @@ function shasum(data: Buffer): string {
 }
 
 function walkFileTree(file: XarFile, visit: (path: string, file: XarFile) => any, dirPath: string = '') {
-  visit(file.srcPath, file);
+  visit(file.srcPath as string, file);
   if (file.type === FileType.Directory) {
     (<XarDirectory>file).children.forEach(child => {
       walkFileTree(child, visit, file.srcPath);
@@ -271,7 +271,7 @@ function extractPEMSection(cert: string, sectionType: string) {
       inSection = true;
     }
     return sectionLines;
-  }, []).join('\n');
+  }, [] as string[]).join('\n');
 }
 
 function extractCertSection(pemFile: string) {
@@ -460,7 +460,7 @@ export class XarArchive {
       let signer = createSign('SHA1');
       signer.update(compressedTOC);
       let signature: Buffer = <any>signer.sign(this.signatureResources.privateKey,
-        undefined /* return a Buffer */);
+        undefined as any /* return a Buffer */);
       assert(signature.length === RSA_SIGNATURE_SIZE);
       heapWriter.write(signature);
     }
@@ -470,8 +470,8 @@ export class XarArchive {
       // verify that file data is being written to expected
       // location within the heap
       assert(heapWriter.bytesWritten === file.data.offset);
-      assert(file.data.data.length === file.data.length);
-      heapWriter.write(file.data.data);
+      assert(file.data.data!.length === file.data.length);
+      heapWriter.write(file.data.data!);
     }
   }
 
