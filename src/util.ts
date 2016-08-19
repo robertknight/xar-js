@@ -18,7 +18,8 @@ export function walk(filePath: string): XarFile {
     return <XarDirectory>{
       name: path.basename(filePath),
       type: FileType.Directory,
-      children: fs.readdirSync(filePath).map(basename => walk(path.join(filePath, basename)))
+      children: fs.readdirSync(filePath).map(basename => walk(path.join(filePath, basename))),
+      srcPath: path.resolve(filePath),
     };
   } else {
     return <XarCompressedFile>{
@@ -26,7 +27,8 @@ export function walk(filePath: string): XarFile {
       type: FileType.File,
       data: {
         size: fileInfo.size
-      }
+      },
+      srcPath: path.resolve(filePath),
     }
   }
 }

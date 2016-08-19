@@ -42,6 +42,11 @@ export interface XarFile {
   /** Filename of the file entry, not including the path. */
   name: string;
   type: FileType;
+  /**
+    * The full path of the source for this entry, used only when
+    * generating archives.
+    */
+  srcPath?: string;
 }
 
 export interface XarFileData {
@@ -128,6 +133,7 @@ class TrackingWriter implements Writer {
 function xarFileTOCEntry(file: XarFile): Object {
   assert(file.id);
   assert(file.name);
+  assert(file.srcPath);
 
   let entry: any = {
     $: {
@@ -196,10 +202,10 @@ function shasum(data: Buffer): string {
 }
 
 function walkFileTree(file: XarFile, visit: (path: string, file: XarFile) => any, dirPath: string = '') {
-  visit(path.join(dirPath, file.name), file);
+  visit(file.srcPath, file);
   if (file.type === FileType.Directory) {
     (<XarDirectory>file).children.forEach(child => {
-      walkFileTree(child, visit, path.join(dirPath, file.name));
+      walkFileTree(child, visit, file.srcPath);
     });
   }
 }

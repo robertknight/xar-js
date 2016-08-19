@@ -29,12 +29,11 @@ function fixturePath(name: string) {
 describe('archive creation',() => {
   it('should create a xar archive',() => {
     const extensionDir = walk(fixturePath('testextension.safariextension'));
-
     const archivePath = path.join(os.tmpdir(), 'test-create.safariextz');
     const archive = new XarArchive();
     const writer = new FileWriter(archivePath);
     archive.addFile(extensionDir);
-    archive.generate(writer, path => new FileReader(fixturePath(path)));
+    archive.generate(writer, path => new FileReader(path));
 
     // read the archive and verify that it at least returns
     // a non-empty table of contents
@@ -50,7 +49,7 @@ describe('archive creation',() => {
     const writer = new FileWriter(archivePath);
     const archive = new XarArchive();
     archive.addFile(emptyFile);
-    archive.generate(writer, path => new FileReader(fixturePath(path)));
+    archive.generate(writer, path => new FileReader(path));
     const readArchive = new XarArchive();
     readArchive.open(new FileReader(archivePath));
     let toc = readArchive.tableOfContentsXML();
@@ -92,7 +91,7 @@ describe('archive signing',() => {
       additionalCerts: [intermediate]
     });
 
-    archive.generate(writer, path => new FileReader(fixturePath(path)));
+    archive.generate(writer, path => new FileReader(path));
 
     // read back archive, check that signature data appears in
     // XML header
