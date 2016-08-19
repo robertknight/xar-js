@@ -110,6 +110,19 @@ function parseXML(content: string) {
   return xml;
 }
 
+/**
+  * Determine the length of signature that will be generated when signing with
+  * the given private key using the SHA1 digest algorithm.
+  */
+function signatureLength(privateKey: string) {
+  // determine signature size by signing some dummy data
+  let signer = createSign('SHA1');
+  signer.update('dummy data');
+  let signature: Buffer = <any>signer.sign(privateKey,
+    undefined /* return a Buffer */);
+  return signature.length;
+}
+
 // a wrapper around a Writer which tracks the number
 // of bytes written
 class TrackingWriter implements Writer {
@@ -243,9 +256,6 @@ const XAR_MAGIC = 0x78617221; // "xar!"
 
 // checksum algorithms
 const XAR_CHECKSUM_SHA1 = 1;
-
-// signature algorithms
-const RSA_SIGNATURE_SIZE = 256;
 
 interface XarHeader {
   size: number;
@@ -394,7 +404,7 @@ export class XarArchive {
     // if there is a signature, increment the heap size
     // by the signature size
     if (this.signatureResources) {
-      heapSize += RSA_SIGNATURE_SIZE;
+      heapSize += signatureLength(this.signatureResources.privateKey);
     }
 
     // create list of files to compress
@@ -463,7 +473,6 @@ export class XarArchive {
       signer.update(compressedTOC);
       let signature: Buffer = <any>signer.sign(this.signatureResources.privateKey,
         undefined /* return a Buffer */);
-      assert(signature.length === RSA_SIGNATURE_SIZE);
       heapWriter.write(signature);
     }
 
@@ -536,7 +545,7 @@ export class XarArchive {
         extractCertSection(this.signatureResources.cert),
         ...this.signatureResources.additionalCerts.map(extractCertSection)
       ];
-      let signatureSize = RSA_SIGNATURE_SIZE;
+      let signatureSize = signatureLength(this.signatureResources.privateKey);
       tocRoot['signature-creation-time'] = signatureTimestamp;
       tocRoot.signature = {
         $: {
