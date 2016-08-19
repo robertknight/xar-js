@@ -1,5 +1,3 @@
-/// <reference path="../typings/tsd.d.ts" />
-
 import * as commander from 'commander';
 import * as fs from 'fs';
 
