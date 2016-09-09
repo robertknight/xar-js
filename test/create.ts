@@ -1,5 +1,3 @@
-/// <reference path="../typings/tsd.d.ts" />
-
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -12,7 +10,7 @@ import { FileReader, FileWriter } from '../src/io';
 import { walk } from '../src/util';
 
 function parseXML(content: string) {
-  let xml: Object;
+  let xml: Object = null as any;
   xml2js.parseString(content, { async: false },(err, result) => {
     if (err) {
       throw err;

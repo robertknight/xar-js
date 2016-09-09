@@ -22,7 +22,7 @@ export class FileWriter implements Writer {
   }
 
   write(data: Buffer) {
-    fs.writeSync(this.fd, data, 0, data.length, null /* write from current pos */);
+    fs.writeSync(this.fd, data, 0, data.length);
   }
 }
 

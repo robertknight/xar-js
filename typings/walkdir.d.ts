@@ -1,5 +1,3 @@
-/// <reference path="node/node.d.ts" />
-
 declare module "walkdir" {
   import * as fs from "fs";
 
