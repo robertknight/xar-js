@@ -1,5 +1,3 @@
-/// <reference path="../typings/tsd.d.ts" />
-
 // this script generates a certificate chain consisting
 // of a self-signed root certificate, an intermediate cert and
 // a leaf cert using OpenSSL

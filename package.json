@@ -28,11 +28,15 @@
     "xml2js": "^0.4.10"
   },
   "devDependencies": {
+    "@types/chai": "^3.4.30",
+    "@types/commander": "^2.3.29",
+    "@types/mocha": "^2.2.29",
+    "@types/q": "0.0.28",
+    "@types/xml2js": "0.0.27",
     "chai": "^3.2.0",
     "child-process-promise": "^1.1.0",
     "mocha": "^2.2.5",
-    "tsd": "^0.6.3",
-    "typescript": "^1.5.3",
+    "typescript": "^2.0.0",
     "typescript-formatter": "^0.4.3"
   },
   "directories": {
