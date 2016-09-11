@@ -108,6 +108,14 @@ function parseXML(content: string) {
   return xml;
 }
 
+function sign(privateKey: string, data: string|Buffer) {
+  let signer = createSign('SHA1');
+  signer.update(data);
+  let signature: Buffer = <any>signer.sign(privateKey,
+    undefined as any/* return a Buffer */);
+  return signature;
+}
+
 // a wrapper around a Writer which tracks the number
 // of bytes written
 class TrackingWriter implements Writer {
@@ -242,9 +250,6 @@ const XAR_MAGIC = 0x78617221; // "xar!"
 // checksum algorithms
 const XAR_CHECKSUM_SHA1 = 1;
 
-// signature algorithms
-const RSA_SIGNATURE_SIZE = 256;
-
 interface XarHeader {
   size: number;
   version: number;
@@ -309,7 +314,8 @@ export class XarArchive {
   private ctypeParser: any;
   private checksumAlgo: DigestAlgorithm;
   private files: XarFile[];
-  private signatureResources: SignatureResources;
+  private signatureResources?: SignatureResources;
+  private signatureLength?: number;
   private reader: Reader;
 
   constructor() {
@@ -371,6 +377,7 @@ export class XarArchive {
   /** Sets the certificates used to sign the generated archive. */
   setCertificates(opts: SignatureResources) {
     this.signatureResources = opts;
+    this.signatureLength = sign(this.signatureResources.privateKey, 'dummydata').length;
   }
 
   /** Generate the xar archive. Reads the data for the files that
@@ -392,7 +399,7 @@ export class XarArchive {
     // if there is a signature, increment the heap size
     // by the signature size
     if (this.signatureResources) {
-      heapSize += RSA_SIGNATURE_SIZE;
+      heapSize += this.signatureLength;
     }
 
     // create list of files to compress
@@ -457,12 +464,7 @@ export class XarArchive {
 
     // write signature
     if (this.signatureResources) {
-      let signer = createSign('SHA1');
-      signer.update(compressedTOC);
-      let signature: Buffer = <any>signer.sign(this.signatureResources.privateKey,
-        undefined as any /* return a Buffer */);
-      assert(signature.length === RSA_SIGNATURE_SIZE);
-      heapWriter.write(signature);
+      heapWriter.write(sign(this.signatureResources.privateKey, compressedTOC));
     }
 
     // write compressed file content
@@ -534,14 +536,13 @@ export class XarArchive {
         extractCertSection(this.signatureResources.cert),
         ...this.signatureResources.additionalCerts.map(extractCertSection)
       ];
-      let signatureSize = RSA_SIGNATURE_SIZE;
       tocRoot['signature-creation-time'] = signatureTimestamp;
       tocRoot.signature = {
         $: {
           style: 'RSA'
         },
         offset: heapSize,
-        size: signatureSize,
+        size: this.signatureLength,
         'KeyInfo': {
           $: {
             xmlns: 'http://www.w3.org/2000/09/xmldsig'
@@ -551,7 +552,7 @@ export class XarArchive {
           }
         }
       };
-      heapSize += signatureSize;
+      heapSize += this.signatureLength;
     }
 
     // file forest
