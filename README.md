@@ -1,3 +1,5 @@
+**DEPRECIATION NOTICE: Since this project was created, Safari changed the technology they use for extensions, and it no longer uses xar archives. See https://underpassapp.com/news/2023-4-24.html**
+
 # xar-js
 [![Build Status](https://travis-ci.org/robertknight/xar-js.png?branch=master)](https://travis-ci.org/robertknight/xar-js) [![npm version](https://badge.fury.io/js/xar-js.svg)](http://badge.fury.io/js/xar-js)
 
